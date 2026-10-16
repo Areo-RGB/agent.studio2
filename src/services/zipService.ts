@@ -4,7 +4,7 @@
  */
 
 import JSZip from 'jszip';
-import { AIToolId, McpServer, Skill, PromptPreset, AI_TOOLS } from '../types';
+import { AIToolId, McpServer, Skill, SkillFile, PromptPreset, AI_TOOLS } from '../types';
 import { generateToolMcpConfig } from './mcpSerializers';
 import { generatePromptExport } from './promptGenerators';
 
@@ -38,7 +38,7 @@ export async function createSingleSkillZip(skill: Skill): Promise<Blob> {
   // Add supporting files
   for (const file of skill.files) {
     if (file.path !== 'SKILL.md') {
-      folder.file(file.path, file.content);
+      folder.file(file.path, file.content, file.isBinary ? { base64: true } : undefined);
     }
   }
 
@@ -58,7 +58,7 @@ export async function createSkillZipForTool(skill: Skill, toolId: AIToolId): Pro
 
   for (const file of skill.files) {
     if (file.path !== 'SKILL.md') {
-      skillFolder.file(file.path, file.content);
+      skillFolder.file(file.path, file.content, file.isBinary ? { base64: true } : undefined);
     }
   }
 
@@ -103,7 +103,7 @@ export async function createAllEnabledSkillsZip(
       skillFolder.file('SKILL.md', skill.skillMdContent);
       for (const file of skill.files) {
         if (file.path !== 'SKILL.md') {
-          skillFolder.file(file.path, file.content);
+          skillFolder.file(file.path, file.content, file.isBinary ? { base64: true } : undefined);
         }
       }
       totalSkillsAdded++;
@@ -174,7 +174,7 @@ export async function createToolBundleZip(
         folder.file('SKILL.md', skill.skillMdContent);
         for (const file of skill.files) {
           if (file.path !== 'SKILL.md') {
-            folder.file(file.path, file.content);
+            folder.file(file.path, file.content, file.isBinary ? { base64: true } : undefined);
           }
         }
       }
@@ -256,7 +256,7 @@ export async function createWorkspaceBundleZip(
           folder.file('SKILL.md', skill.skillMdContent);
           for (const file of skill.files) {
             if (file.path !== 'SKILL.md') {
-              folder.file(file.path, file.content);
+              folder.file(file.path, file.content, file.isBinary ? { base64: true } : undefined);
             }
           }
         }
@@ -290,7 +290,7 @@ export interface ImportedSkillData {
   name: string;
   description: string;
   skillMdContent: string;
-  files: { path: string; content: string }[];
+  files: { path: string; content: string; isBinary?: boolean }[];
   tags: string[];
 }
 
@@ -322,7 +322,7 @@ export async function parseSkillsFromZip(zipFile: File): Promise<ImportedSkillDa
 
   // Now assign files to each skill root
   for (const [rootPrefix] of skillRoots.entries()) {
-    const skillFiles: { path: string; content: string }[] = [];
+    const skillFiles: SkillFile[] = [];
     let skillMdContent = '';
 
     const prefixSlash = rootPrefix ? `${rootPrefix}/` : '';
@@ -340,12 +340,20 @@ export async function parseSkillsFromZip(zipFile: File): Promise<ImportedSkillDa
       if (!entry) continue;
 
       const subPath = rootPrefix ? relPath.substring(prefixSlash.length) : relPath;
-      const text = await entry.async('string');
-
-      if (subPath.toLowerCase() === 'skill.md') {
-        skillMdContent = text;
+      const bytes = await entry.async('uint8array');
+      if (bytes.byteLength > 10 * 1024 * 1024) {
+        throw new Error(`Skill file exceeds 10 MiB: ${subPath}`);
       }
-      skillFiles.push({ path: subPath, content: text });
+      // Binary files use base64 in IndexedDB, and are decoded in every ZIP export.
+      const isBinary = isBinarySkillAsset(bytes, subPath);
+      if (subPath.toLowerCase() === 'skill.md' && isBinary) {
+        throw new Error('SKILL.md must contain UTF-8 Markdown.');
+      }
+      const content = isBinary
+        ? skillBytesToBase64(bytes)
+        : new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+      if (subPath.toLowerCase() === 'skill.md') skillMdContent = content;
+      skillFiles.push({ path: subPath, content, isBinary: isBinary || undefined });
     }
 
     if (skillMdContent) {
@@ -406,4 +414,20 @@ function slugify(text: string): string {
     .replace(/[^\w\s-]/g, '')
     .replace(/[\s_-]+/g, '-')
     .replace(/^-+|-+$/g, '') || 'skill';
+}
+
+
+/** Imported binary assets are stored as base64 strings; preserve bytes on ZIP export. */
+function isBinarySkillAsset(bytes: Uint8Array, path: string): boolean {
+  if (/\.(?:zip|png|jpe?g|gif|webp|ico|pdf|wasm|mp[34]|mov|webm|woff2?|ttf|otf|eot|gz|tar|7z|sqlite|db|jar|exe|bin|class|pyc)$/i.test(path)) return true;
+  if (bytes.subarray(0, Math.min(bytes.length, 4096)).includes(0)) return true;
+  try { new TextDecoder('utf-8', { fatal: true }).decode(bytes); return false; }
+  catch { return true; }
+}
+function skillBytesToBase64(bytes: Uint8Array): string {
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += 32768) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + 32768));
+  }
+  return btoa(binary);
 }

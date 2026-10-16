@@ -17,6 +17,7 @@ import {
 import { Skill, SkillFile, AIToolId, AI_TOOLS } from '../../types';
 import { parseSkillsFromZip, parseSkillFrontmatter, ImportedSkillData } from '../../services/zipService';
 import { slugify } from '../../services/mcpParsers';
+import { SkillsCliImportPanel } from './SkillsCliImportPanel';
 
 interface SkillImportModalProps {
   isOpen: boolean;
@@ -33,9 +34,7 @@ export const SkillImportModal: React.FC<SkillImportModalProps> = ({
   onClose,
   onImportComplete,
 }) => {
-  if (!isOpen) return null;
-
-  const [inputMode, setInputMode] = useState<'zip' | 'file' | 'paste'>('zip');
+  const [inputMode, setInputMode] = useState<'zip' | 'file' | 'paste' | 'cli'>('zip');
   const [pastedText, setPastedText] = useState('');
   const [selectedFileName, setSelectedFileName] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -184,6 +183,8 @@ export const SkillImportModal: React.FC<SkillImportModalProps> = ({
     onImportComplete(skillsToSave, replacedCount);
   };
 
+  if (!isOpen) return null;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs">
       <div className="bg-neutral-900 border border-neutral-800 rounded-xl max-w-2xl w-full shadow-2xl p-6 flex flex-col max-h-[85vh] animate-in fade-in zoom-in-95 duration-150">
@@ -208,7 +209,7 @@ export const SkillImportModal: React.FC<SkillImportModalProps> = ({
           {!analyzed ? (
             <>
               {/* Mode Tabs */}
-              <div className="flex items-center gap-2 border-b border-neutral-800 pb-3">
+              <div className="flex flex-wrap items-center gap-2 border-b border-neutral-800 pb-3">
                 <button
                   type="button"
                   onClick={() => setInputMode('zip')}
@@ -244,6 +245,18 @@ export const SkillImportModal: React.FC<SkillImportModalProps> = ({
                 >
                   <FileText className="w-3.5 h-3.5" />
                   <span>Paste SKILL.md</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setInputMode('cli')}
+                  className={`px-3 py-1.5 text-xs font-medium rounded-lg flex items-center gap-2 transition-colors ${
+                    inputMode === 'cli'
+                      ? 'bg-neutral-800 text-white'
+                      : 'text-neutral-400 hover:text-white'
+                  }`}
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  <span>Paste Skills CLI Command</span>
                 </button>
               </div>
 
@@ -297,6 +310,13 @@ export const SkillImportModal: React.FC<SkillImportModalProps> = ({
                     Parse Pasted Content
                   </button>
                 </div>
+              )}
+
+              {inputMode === 'cli' && (
+                <SkillsCliImportPanel
+                  existingSkills={existingSkills}
+                  onImportComplete={onImportComplete}
+                />
               )}
 
               {error && (
@@ -421,7 +441,7 @@ export const SkillImportModal: React.FC<SkillImportModalProps> = ({
         {/* Footer */}
         <div className="pt-4 border-t border-neutral-800 flex items-center justify-between">
           <div className="text-xs text-neutral-500">
-            {analyzed ? 'Ready to add to local browser library.' : 'Select or upload a skill to proceed.'}
+            {analyzed ? 'Ready to add to local browser library.' : inputMode === 'cli' ? 'Fetch and preview the real GitHub files above.' : 'Select or upload a skill to proceed.'}
           </div>
 
           <div className="flex items-center gap-2.5">
