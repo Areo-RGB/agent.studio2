@@ -1,0 +1,6 @@
+{
+  "name": "Agent Config Studio",
+  "description": "Centralized browser dashboard for discovering, organizing, and exporting MCP servers, Skills, and Prompts across Claude Code, OpenAI Codex, Pi, and OpenCode.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
