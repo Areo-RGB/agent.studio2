@@ -74,7 +74,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Brand Header */}
       <div className="h-14 px-5 flex items-center gap-3 border-b border-neutral-800/80">
         <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-amber-500 to-amber-700 flex items-center justify-center shadow-xs">
-          <Cpu className="w-4 h-4 text-neutral-950" />
+          <Cpu className="w-4 h-4 text-slate-950" />
         </div>
         <div className="flex flex-col min-w-0">
           <span className="text-sm font-semibold tracking-tight text-neutral-100 whitespace-nowrap">

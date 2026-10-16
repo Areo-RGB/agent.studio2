@@ -141,13 +141,32 @@ export default function App() {
       .catch((e) => console.error(e));
   }, [reloadData]);
 
-  // Handle theme changes
+  // Handle theme changes (dark, light, system)
   useEffect(() => {
-    if (settings.theme === 'dark' || (settings.theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
+    const applyTheme = () => {
+      const isDark =
+        settings.theme === 'dark' ||
+        (settings.theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      if (isDark) {
+        document.documentElement.classList.add('dark');
+        document.documentElement.setAttribute('data-theme', 'dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+        document.documentElement.setAttribute('data-theme', 'light');
+      }
+    };
+
+    applyTheme();
+
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleSystemChange = () => {
+      if (settings.theme === 'system') {
+        applyTheme();
+      }
+    };
+
+    mediaQuery.addEventListener('change', handleSystemChange);
+    return () => mediaQuery.removeEventListener('change', handleSystemChange);
   }, [settings.theme]);
 
   const handleUpdateSettings = (newSettings: AppSettings) => {
@@ -156,8 +175,10 @@ export default function App() {
   };
 
   const handleToggleTheme = () => {
-    const nextTheme = settings.theme === 'dark' ? 'light' : 'dark';
+    const isCurrentlyDark = document.documentElement.classList.contains('dark');
+    const nextTheme: AppSettings['theme'] = isCurrentlyDark ? 'light' : 'dark';
     handleUpdateSettings({ ...settings, theme: nextTheme });
+    addToast('info', 'Theme Changed', `Switched to ${nextTheme} mode.`);
   };
 
   const handleNavigate = (nav: AppSettings['activeNav']) => {

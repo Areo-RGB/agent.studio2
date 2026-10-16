@@ -251,9 +251,9 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
 
           <button
             onClick={() => onNavigate('export')}
-            className="px-4 py-2 rounded-lg bg-neutral-100 hover:bg-white text-neutral-950 text-xs font-semibold flex items-center gap-2 transition-colors ml-auto shadow-xs"
+            className="px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-semibold flex items-center gap-2 transition-colors ml-auto shadow-xs"
           >
-            <FolderOutput className="w-3.5 h-3.5 text-neutral-900" />
+            <FolderOutput className="w-3.5 h-3.5 text-slate-950" />
             <span>Generate Workspace Bundle</span>
           </button>
         </div>
