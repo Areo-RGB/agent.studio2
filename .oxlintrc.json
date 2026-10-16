@@ -1,0 +1,9 @@
+{
+  "jsPlugins": ["@shadcn/lint"],
+  "settings": {
+    "shadcn": {
+      "ui": "@/src/components",
+      "note": "See design.md for design rules and approved exceptions."
+    }
+  }
+}
